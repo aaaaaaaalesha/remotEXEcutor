@@ -5,15 +5,16 @@ import shutil
 import socket
 import subprocess
 import tempfile
+from collections import defaultdict
 from pathlib import Path
 
 import inquirer
 from fabric import Connection
 from inquirer.errors import ValidationError
-from inquirer.themes import BlueComposure
+from inquirer.themes import GreenPassion
 from tqdm import tqdm
 
-INQUIRER_THEME = BlueComposure()
+INQUIRER_THEME = GreenPassion()  # BlueComposure()
 
 BASE_DIR = Path(__file__).resolve().parent
 MAIN_CONFIG_PATH = BASE_DIR.joinpath('config.ini')
@@ -29,11 +30,12 @@ def execute_commands_on_remote(
         password,
         remote_commands_dict
 ):
-    def copy_directory_to_remote(conn, local_dir, remote_dir):
+    def copy_directory_to_remote(conn, local_dir: Path, remote_dir):
         temp_tar_file = f"{local_dir}.tar.gz"
         shutil.make_archive(local_dir, 'gztar', local_dir)
-        conn.put(temp_tar_file, remote_dir)
+        result = conn.put(temp_tar_file, remote_dir)
         os.remove(temp_tar_file)
+        return result.remote
 
     temp_dir = tempfile.mkdtemp()
 
@@ -45,24 +47,26 @@ def execute_commands_on_remote(
         ) as conn:
             remote_temp_dir = conn.run('mktemp -d').stdout.strip()
 
-            for remote_dir, commands in remote_commands_dict.items():
-                copy_directory_to_remote(conn, remote_dir, remote_temp_dir)
-                conn.run(
-                    f'tar -xzvf {os.path.join(remote_temp_dir, os.path.basename(remote_dir))}.tar.gz -C {remote_temp_dir}')
+            for local_dir, commands in remote_commands_dict.items():
+                remote_archive_path = copy_directory_to_remote(conn, local_dir, remote_temp_dir)
+                conn.run(f'tar -xzvf {remote_archive_path} -C {remote_temp_dir}')
 
             for command in commands:
-                if 'chmod' in command:
-                    conn.run(f'chmod +x {os.path.join(remote_temp_dir, command.split()[-1])}')
+                # if 'chmod' in command:
+                #     conn.run(f'chmod +x {os.path.join(remote_temp_dir, command.split()[-1])}')
                 conn.run(f'cd {remote_temp_dir} && {command}')
 
-            for remote_dir, _ in remote_commands_dict.items():
-                result_archive_path = os.path.join(temp_dir, f'{os.path.basename(remote_dir)}.zip')
+            for local_dir, _ in remote_commands_dict.items():
+                result_archive_path = os.path.join(temp_dir, f'{local_dir.stem}.zip')
                 conn.run(f'tar -czvf {result_archive_path} -C {remote_temp_dir} .')
                 conn.get(result_archive_path, result_archive_path)
-
-            conn.run(f'rm -rf {remote_temp_dir}')
-    finally:
+    except Exception as err:
         shutil.rmtree(temp_dir)
+        raise err
+    finally:
+        conn.run(f'rm -rf {remote_temp_dir}')
+
+    return result_archive_path
 
 
 def input_password(hostname: str, username: str) -> str:
@@ -210,28 +214,28 @@ def scan_programs(programs_dir: Path) -> dict[Path, list[str]]:
 
 def main():
     print("Welcome to remote_exec_tool!")
-    # questions = [
-    #     inquirer.Text(
-    #         name='hostname',
-    #         message='Enter IP address or hostname you need to connect',
-    #         validate=validate_host,
-    #     ),
-    #     inquirer.Text(
-    #         name='username',
-    #         message='Enter username in the passed hostname',
-    #     ),
-    # ]
-    #
-    # answers = inquirer.prompt(
-    #     questions=questions,
-    #     theme=INQUIRER_THEME,
-    # )
-    #
-    # hostname = answers['hostname']
-    # username = answers['username']
+    questions = [
+        inquirer.Text(
+            name='hostname',
+            message='Enter IP address or hostname you need to connect',
+            validate=validate_host,
+        ),
+        inquirer.Text(
+            name='username',
+            message='Enter username in the passed hostname',
+        ),
+    ]
 
-    hostname = 'alexandrov-al'
-    username = 'alexandrov'
+    answers = inquirer.prompt(
+        questions=questions,
+        theme=INQUIRER_THEME,
+    )
+
+    hostname = answers['hostname']
+    username = answers['username']
+
+    # hostname = 'alexandrov-al'
+    # username = 'alexandrov'
 
     # Проверяем доступность портов для различных транспортов
     transport_ports = parse_config()
@@ -260,34 +264,33 @@ def main():
     print('transport:', transport_type, 'port:', transport_port)
     match transport_type:
         case 'SSH':
-            # password = input_password(hostname, username) TODO: change it
-            password = input('password:')
+            password = input_password(hostname, username)
             programs_dir = platform_program_dir(hostname, username, password)
             program_commands = scan_programs(programs_dir)
 
-            # chosen_program_commands_list: list[tuple[Path, str]] = inquirer.checkbox(
-            #     'Choose the programs/commands you want to execute on remote host',
-            #     choices=[
-            #         (f'{program_path.stem}: {cmd}', (program_path, cmd))
-            #         for program_path, cmd_list in program_commands.items()
-            #         for cmd in cmd_list
-            #     ],
-            # )
-            # if not chosen_program_commands_list:
-            #     print('You have no choices for remote execution.')
-            #     exit(1)
-            #
-            # # Получили словарь [путь до проги -- команда проги]
-            # chosen_program_commands: dict[Path, list[str]] = defaultdict(list)
-            # for path, command in chosen_program_commands_list:
-            #     chosen_program_commands[path].append(command)
+            chosen_program_commands_list: list[tuple[Path, str]] = inquirer.checkbox(
+                'Choose the programs/commands you want to execute on remote host',
+                choices=[
+                    (f'{program_path.stem}: {cmd}', (program_path, cmd))
+                    for program_path, cmd_list in program_commands.items()
+                    for cmd in cmd_list
+                ],
+            )
+            if not chosen_program_commands_list:
+                print('You have no choices for remote execution.')
+                exit(1)
 
+            # Получили словарь [путь до проги -- команда проги]
+            chosen_program_commands: dict[Path, list[str]] = defaultdict(list)
+            for path, command in chosen_program_commands_list:
+                chosen_program_commands[path].append(command)
+
+            # TODO: fix bugs here
             results_path = execute_commands_on_remote(
                 hostname,
                 username,
                 password,
-                program_commands,  # TODO: change to chosen
-
+                chosen_program_commands,  # TODO: change to chosen
             )
 
             print('Results:', results_path)
