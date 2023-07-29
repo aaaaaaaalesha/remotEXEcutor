@@ -11,10 +11,10 @@ from pathlib import Path
 import inquirer
 from fabric import Connection
 from inquirer.errors import ValidationError
-from inquirer.themes import GreenPassion
+from inquirer.themes import BlueComposure
 from tqdm import tqdm
 
-INQUIRER_THEME = GreenPassion()  # BlueComposure()
+INQUIRER_THEME = BlueComposure()
 
 BASE_DIR = Path(__file__).resolve().parent
 MAIN_CONFIG_PATH = BASE_DIR.joinpath('config.ini')
@@ -258,10 +258,6 @@ def main():
     else:
         transport_port = ports[0]
 
-    print('\nok lets go')
-    print('hostname:', hostname)
-    print('username:', username)
-    print('transport:', transport_type, 'port:', transport_port)
     match transport_type:
         case 'SSH':
             password = input_password(hostname, username)
@@ -286,14 +282,14 @@ def main():
                 chosen_program_commands[path].append(command)
 
             # TODO: fix bugs here
-            results_path = execute_commands_on_remote(
-                hostname,
-                username,
-                password,
-                chosen_program_commands,  # TODO: change to chosen
-            )
+            # results_path = execute_commands_on_remote(
+            #     hostname,
+            #     username,
+            #     password,
+            #     chosen_program_commands,
+            # )
 
-            print('Results:', results_path)
+            print('Results:', chosen_program_commands)
 
         case _:
             raise NotImplementedError
