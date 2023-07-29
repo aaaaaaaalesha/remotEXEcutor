@@ -15,7 +15,7 @@ BASE_DIR = Path(__file__).resolve().parent
 LOG_LEVEL = logging.DEBUG
 LOG_TO_STDERR = True
 LOG_TO_FILES = True
-LOG_DIR = BASE_DIR / 'log'
+LOG_DIR = BASE_DIR / 'logs'
 
 HOSTNAME = os.environ.get('HOSTNAME', default='hostname')
 USERNAME = os.environ.get('USERNAME', default='username')

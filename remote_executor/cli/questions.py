@@ -30,7 +30,7 @@ ask_transport_port = (
 )
 
 ask_password = (
-    lambda username, hostname: inquirer.password(
+    lambda hostname, username: inquirer.password(
         message=f'Password for {username}@{hostname}'
     )
 )

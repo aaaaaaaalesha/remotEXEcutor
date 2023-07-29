@@ -1,9 +1,8 @@
 import os
 import shutil
 import tempfile
-
-from pathlib import Path
 from collections import defaultdict
+from pathlib import Path
 
 from fabric import Connection
 
@@ -11,6 +10,7 @@ from remote_executor.cli.questions import (
     ask_password,
     ask_program_commands_list,
 )
+from remote_executor.logger import logger
 from settings import PROGRAMS_NIX_DIR, PROGRAMS_WINDOWS_DIR
 from .utils import scan_programs
 
@@ -120,7 +120,7 @@ def get_remote_platform(host, user, password) -> str | None:
 
 def request_password(hostname: str, username: str, retries=5) -> str:
     for i in range(retries):
-        password = ask_password(username, hostname)
+        password = ask_password(hostname, username)
         # noinspection PyBroadException
         try:
             with Connection(
@@ -134,7 +134,9 @@ def request_password(hostname: str, username: str, retries=5) -> str:
         except Exception:
             print('Incorrect password')
 
-    print('Terminate program. Password retries number exceeded')
+    msg = 'Terminate program. Password retries number exceeded'
+    logger.error(msg)
+    print(msg)
     exit(1)
 
 

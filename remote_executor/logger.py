@@ -3,7 +3,7 @@ import os
 import sys
 from pathlib import Path
 
-from .settings import (
+from remote_executor.settings import (
     APPLICATION_NAME,
     LOG_LEVEL,
     LOG_DIR,

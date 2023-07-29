@@ -19,8 +19,8 @@ TRANSPORT_HANDLERS = {
 def main():
     """Entrypoint. Welcome ;)"""
     print('Welcome to remote_executor!')
-    # hostname = '192.168.0.101'
-    # username = 'aaaaaaaalesha'
+    # hostname = 'alexandrov-al'
+    # username = 'alexandrov'
     hostname = ask_hostname()
     # Проверяем доступность портов для различных транспортов
     transport_types: dict = get_available_transports(hostname, parse_config())
