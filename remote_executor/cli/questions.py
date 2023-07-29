@@ -1,6 +1,6 @@
 import inquirer
 
-from .validators import host_validator, port_validator
+from .validators import host_validator
 
 ask_hostname = (
     lambda: inquirer.text(

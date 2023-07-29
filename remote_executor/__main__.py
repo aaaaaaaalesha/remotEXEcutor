@@ -1,11 +1,14 @@
+from cli.options import transport_option
+from cli.questions import (
+    ask_hostname,
+    ask_username,
+)
+from remote_executor.connections.rdp import process_rdp
+from remote_executor.connections.ssh import process_ssh
 from remote_executor.connections.utils import (
     get_available_transports,
     parse_config,
 )
-from cli.options import transport_option
-from cli.questions import *
-from remote_executor.connections.ssh import process_ssh
-from remote_executor.connections.rdp import process_rdp
 
 TRANSPORT_HANDLERS = {
     'SSH': process_ssh,
@@ -15,7 +18,7 @@ TRANSPORT_HANDLERS = {
 
 def main():
     """Entrypoint. Welcome ;)"""
-    print("Welcome to remote_executor!")
+    print('Welcome to remote_executor!')
     # hostname = '192.168.0.101'
     # username = 'aaaaaaaalesha'
     hostname = ask_hostname()
@@ -33,7 +36,11 @@ def main():
     if transport_handler is None:
         raise NotImplementedError
 
-    transport_handler(hostname, username)
+    transport_handler(
+        hostname=hostname,
+        username=username,
+        port=transport_port,
+    )
 
 
 if __name__ == '__main__':

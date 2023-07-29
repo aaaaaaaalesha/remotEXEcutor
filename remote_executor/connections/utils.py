@@ -7,10 +7,8 @@ from pathlib import Path
 from tqdm import tqdm
 
 from remote_executor.settings import (
-    PROGRAMS_NIX_DIR,
     LOCAL_CONFIG_NAME,
     MAIN_CONFIG_PATH,
-    PROGRAMS_WINDOWS_DIR,
 )
 
 

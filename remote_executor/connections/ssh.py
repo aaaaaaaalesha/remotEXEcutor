@@ -15,7 +15,7 @@ from settings import PROGRAMS_NIX_DIR, PROGRAMS_WINDOWS_DIR
 from .utils import scan_programs
 
 
-def process_ssh(hostname, username):
+def process_ssh(hostname, username, port=22):
     password = request_password(hostname, username)
     programs_dir = platform_program_dir(hostname, username, password)
     program_commands = scan_programs(programs_dir)
