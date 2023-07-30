@@ -9,6 +9,7 @@ from remote_executor.connections.utils import (
     get_available_transports,
     parse_config,
 )
+from remote_executor.settings import APPLICATION_LOGO
 
 TRANSPORT_HANDLERS = {
     'SSH': process_ssh,
@@ -18,7 +19,7 @@ TRANSPORT_HANDLERS = {
 
 def main():
     """Entrypoint. Welcome ;)"""
-    print('Welcome to remote_executor!')
+    print(APPLICATION_LOGO)
     # hostname = 'alexandrov-al'
     # username = 'alexandrov'
     hostname = ask_hostname()

@@ -10,6 +10,8 @@ def host_validator(_answers: dict, host_value: str) -> bool:
     :param host_value:
     :return:
     """
+    if not host_value:
+        raise ValidationError(value='', reason='Empty. Denied.')
     try:
         subprocess.run(
             ['ping', '-n', '1', host_value],
