@@ -17,7 +17,6 @@ APPLICATION_LOGO = LOGO_PATH.read_text('utf-8') if LOGO_PATH.exists() else APPLI
 
 # Configure logging.
 LOG_LEVEL = logging.DEBUG
-LOG_TO_STDERR = True
 LOG_TO_FILES = True
 LOG_DIR = BASE_DIR / 'logs'
 

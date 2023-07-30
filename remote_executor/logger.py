@@ -7,7 +7,6 @@ from remote_executor.settings import (
     APPLICATION_NAME,
     LOG_LEVEL,
     LOG_DIR,
-    LOG_TO_STDERR,
     LOG_TO_FILES,
 )
 
@@ -20,10 +19,11 @@ if not logger.hasHandlers():
         datefmt='%d-%m-%Y %H:%M:%S',
     )
 
-    if LOG_TO_STDERR:
-        stderr_handler = logging.StreamHandler(stream=sys.stderr)
-        stderr_handler.setFormatter(formatter)
-        logger.addHandler(stderr_handler)
+    # To use logger only, not print() + logger.info().
+    cli_handler = logging.StreamHandler(stream=sys.stdout)
+    cli_handler.setLevel(logging.INFO)
+    cli_handler.setFormatter(logging.Formatter(fmt='%(message)s'))
+    logger.addHandler(cli_handler)
 
     if LOG_TO_FILES:
         Path(LOG_DIR).mkdir(exist_ok=True)

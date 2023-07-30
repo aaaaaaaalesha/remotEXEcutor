@@ -11,8 +11,13 @@ from remote_executor.cli.questions import (
     ask_program_commands_list,
 )
 from remote_executor.logger import logger
-from settings import PROGRAMS_NIX_DIR, PROGRAMS_WINDOWS_DIR
-from .utils import scan_programs
+from remote_executor.connections.utils import scan_programs
+from remote_executor.settings import (
+    PROGRAMS_NIX_DIR,
+    PROGRAMS_WINDOWS_DIR,
+    LOCAL_CONFIG_NAME,
+    PROGRAMS_DIR,
+)
 
 
 def process_ssh(hostname, username, port=22):
@@ -20,12 +25,21 @@ def process_ssh(hostname, username, port=22):
     programs_dir = platform_program_dir(hostname, username, password)
     program_commands = scan_programs(programs_dir)
 
-    chosen_program_commands_list: list[tuple[Path, str]] = ask_program_commands_list(program_commands)
-    if not chosen_program_commands_list:
-        print('You have no choices for remote execution.')
+    if not program_commands:
+        msg = (
+            'You have no choices for remote execution. '
+            f'Please, add {LOCAL_CONFIG_NAME} near executable in {PROGRAMS_DIR}.'
+        )
+        logger.error(msg)
         exit(1)
 
-    # Получили словарь [путь до проги -- команда проги]
+    chosen_program_commands_list: list[tuple[Path, str]] = ask_program_commands_list(program_commands)
+
+    if not chosen_program_commands_list:
+        logger.info('You have choose nothing. Ok, goodbye...')
+        exit(1)
+
+    # Получили словарь [путь до проги -- команда проги].
     chosen_program_commands: dict[Path, list[str]] = defaultdict(list)
     for path, command in chosen_program_commands_list:
         chosen_program_commands[path].append(command)
@@ -38,7 +52,7 @@ def process_ssh(hostname, username, port=22):
         chosen_program_commands,
     )
 
-    print('Results:', results_path)
+    logger.info('Results:', results_path)
 
 
 def execute_commands_on_remote(
@@ -114,7 +128,7 @@ def get_remote_platform(host, user, password) -> str | None:
             else:
                 return None
     except Exception as e:
-        print(f"Error connecting to the remote host: {e}")
+        logger.error(f"Error connecting to the remote host: {e}")
         return None
 
 
@@ -132,11 +146,10 @@ def request_password(hostname: str, username: str, retries=5) -> str:
                 conn.run('whoami')
                 return password
         except Exception:
-            print('Incorrect password')
+            logger.info('Incorrect password')
 
     msg = 'Terminate program. Password retries number exceeded'
     logger.error(msg)
-    print(msg)
     exit(1)
 
 
@@ -158,7 +171,7 @@ def platform_program_dir(
     """
     platform = get_remote_platform(hostname, username, password)
     if platform is None:
-        print('Could not get the target host platform, sorry :(')
+        logger.error('Could not get the target host platform, sorry :(')
         exit(1)
 
     return nix_dir if platform == 'nix' else windows_dir

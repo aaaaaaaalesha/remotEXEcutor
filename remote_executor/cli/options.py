@@ -1,4 +1,4 @@
-from .questions import (
+from remote_executor.cli.questions import (
     ask_transport_type,
     ask_transport_port,
 )

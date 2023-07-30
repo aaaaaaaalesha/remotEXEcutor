@@ -13,7 +13,8 @@ def process_rdp(hostname, username, port=3389):
     elif system_name in ('Linux', 'Darwin'):
         nix_rdp_connect(hostname, username, port)
     else:
-        print(f"Error: Unsupported operating system '{system_name}'.")
+        logger.error(f"Unsupported operating system '{system_name}'.")
+        exit(1)
 
 
 def windows_rdp_connect(hostname, port=3389):
@@ -25,7 +26,6 @@ def windows_rdp_connect(hostname, port=3389):
         alternate_mstsc = PROGRAMS_WINDOWS_DIR / 'mstsc' / 'mstsc.exe'
         if not alternate_mstsc.exists():
             logger.error(f'Alternative executable {msg} by path {alternate_mstsc}')
-            print(msg)
             exit(1)
 
         subprocess.run([alternate_mstsc, f'/v:{hostname}:{port}'])
@@ -43,7 +43,6 @@ def nix_rdp_connect(hostname: str, username: str, port=3389):
             'Please install "xfreerdp" to connect to RDP on Linux/Darwin'
         )
         logger.error('No suitable remote desktop client found')
-        print(msg)
 
 
 def request_password(hostname: str, username: str, port=3389, retries=5) -> str:
@@ -59,4 +58,4 @@ def request_password(hostname: str, username: str, port=3389, retries=5) -> str:
             ])
             return password
         except Exception:
-            print('Incorrect password')
+            logger.info('Incorrect password')
