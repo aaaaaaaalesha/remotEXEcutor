@@ -10,8 +10,8 @@ from remote_executor.cli.questions import (
     ask_password,
     ask_program_commands_list,
 )
-from remote_executor.logger import logger
 from remote_executor.connections.utils import scan_programs
+from remote_executor.log import logger
 from remote_executor.settings import (
     PROGRAMS_NIX_DIR,
     PROGRAMS_WINDOWS_DIR,
@@ -26,11 +26,10 @@ def process_ssh(hostname, username, port=22):
     program_commands = scan_programs(programs_dir)
 
     if not program_commands:
-        msg = (
+        logger.error(
             'You have no choices for remote execution. '
             f'Please, add {LOCAL_CONFIG_NAME} near executable in {PROGRAMS_DIR}.'
         )
-        logger.error(msg)
         exit(1)
 
     chosen_program_commands_list: list[tuple[Path, str]] = ask_program_commands_list(program_commands)
@@ -90,7 +89,6 @@ def execute_commands_on_remote(
             for local_dir, commands in remote_commands_dict.items():
                 remote_archive_path = copy_directory_to_remote(conn, local_dir, remote_temp_dir)
                 conn.run(f'tar -xzvf {remote_archive_path} -C {remote_temp_dir}')
-
             for command in commands:
                 # if 'chmod' in command:
                 #     conn.run(f'chmod +x {os.path.join(remote_temp_dir, command.split()[-1])}')
@@ -120,10 +118,12 @@ def get_remote_platform(host, user, password) -> str | None:
     try:
         # Создаем подключение к удаленному хосту.
         with Connection(host=host, user=user, connect_kwargs={'password': password}) as conn:
+            nix_res = conn.run('uname', hide=True, warn=True)
+            win_res = conn.run('help', hide=True, warn=True)
             # Проверяем операционную систему на удаленном хосте.
-            if conn.run('uname', hide=True).ok:
+            if nix_res.ok:
                 return 'nix'
-            elif conn.run('ver', hide=True).ok:
+            elif win_res.ok:
                 return 'windows'
             else:
                 return None

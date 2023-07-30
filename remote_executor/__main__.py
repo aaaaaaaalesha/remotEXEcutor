@@ -1,6 +1,5 @@
 from remote_executor.cli.options import transport_option
 from remote_executor.cli.questions import (
-    ask_hostname,
     ask_username,
 )
 from remote_executor.connections.rdp import process_rdp
@@ -9,7 +8,7 @@ from remote_executor.connections.utils import (
     get_available_transports,
     parse_config,
 )
-from remote_executor.logger import logger
+from remote_executor.log import logger
 from remote_executor.settings import APPLICATION_LOGO
 
 TRANSPORT_HANDLERS = {

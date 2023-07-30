@@ -1,26 +1,27 @@
 import platform
-import subprocess
 
 from remote_executor.cli.questions import ask_password
-from remote_executor.logger import logger
+from remote_executor.connections.utils import run
+from remote_executor.log import logger
 from remote_executor.settings import PROGRAMS_WINDOWS_DIR
 
 
 def process_rdp(hostname, username, port=3389):
     system_name = platform.system()
+    logger.info(f'Your platform: {system_name}')
     if system_name == 'Windows':
         windows_rdp_connect(hostname, port)
     elif system_name in ('Linux', 'Darwin'):
         nix_rdp_connect(hostname, username, port)
     else:
-        logger.error(f"Unsupported operating system '{system_name}'.")
+        logger.error(f'Unsupported operating system "{system_name}".')
         exit(1)
 
 
 def windows_rdp_connect(hostname: str, username: str, port=3389):
     try:
-        subprocess.run(['cmdkey', f'/generic:{hostname}:{port}', f'/user:{username}'])
-        subprocess.run(['mstsc', f'/v:{hostname}:{port}'])
+        run(['cmdkey', f'/generic:{hostname}:{port}', f'/user:{username}'])
+        run(['mstsc', f'/v:{hostname}:{port}'])
     except FileNotFoundError:
         msg = '"mstsc.exe" not found. Make sure Remote Desktop Connection client is installed'
         logger.error(msg)
@@ -29,17 +30,16 @@ def windows_rdp_connect(hostname: str, username: str, port=3389):
             logger.error(f'Alternative executable {msg} by path {alternate_mstsc}')
             exit(1)
 
-        subprocess.run([alternate_mstsc, f'/v:{hostname}:{port}'])
+        run([alternate_mstsc, f'/v:{hostname}:{port}'])
     finally:
-        subprocess.run(['cmdkey', f'/delete:{hostname}:{port}'])
+        run(['cmdkey', f'/delete:{hostname}:{port}'])
 
 
 def nix_rdp_connect(hostname: str, username: str, port=3389):
     password = request_password(hostname, username, port)
     # noinspection PyBroadException
     try:
-        command = ['xfreerdp', '/cert-ignore', f'/u:{username}', f'/p:{password}', f'/v:{hostname}:{port}']
-        subprocess.run(command)
+        run(['xfreerdp', '/cert-ignore', f'/u:{username}', f'/p:{password}', f'/v:{hostname}:{port}'])
     except Exception:
         logger.error(
             'No suitable remote desktop client found.\n'
@@ -52,7 +52,7 @@ def request_password(hostname: str, username: str, port=3389, retries=5) -> str:
         # noinspection PyBroadException
         try:
             password = ask_password(hostname, username)
-            subprocess.run([
+            run([
                 'xfreerdp',
                 '/cert-ignore',
                 f'/u:{username}',

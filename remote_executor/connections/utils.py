@@ -2,11 +2,12 @@ import configparser
 import json
 import os
 import socket
-
+import subprocess
 from pathlib import Path
 
 from tqdm import tqdm
 
+from remote_executor.log import log_subprocess
 from remote_executor.settings import (
     LOCAL_CONFIG_NAME,
     MAIN_CONFIG_PATH,
@@ -80,7 +81,8 @@ def collect_programs(programs: dict, file: str):
     :return:
     """
     config = configparser.ConfigParser()
-    config.read(file)
+    with open(file, 'r', encoding='cp1251') as f:
+        config.read_file(f)
     for program in config.sections():
         # Check that program exists in catalog (not in config only).
         program_dir = Path(file).parent
@@ -102,3 +104,15 @@ def parse_config(config_path=MAIN_CONFIG_PATH) -> dict:
         for section in config.sections()
         if config.get(section, 'ports') is not None
     }
+
+
+def run(*args, log_it=True, **kwargs) -> subprocess.CompletedProcess:
+    completed_process = subprocess.run(
+        *args,
+        capture_output=True,
+        encoding='utf-8',
+        **kwargs,
+    )
+    if log_it:
+        log_subprocess(completed_process)
+    return completed_process
