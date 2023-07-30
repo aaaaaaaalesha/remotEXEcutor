@@ -37,7 +37,7 @@ def process_ssh(hostname, username, port=22):
 
     if not chosen_program_commands_list:
         logger.info('You have choose nothing. Ok, goodbye...')
-        exit(1)
+        exit(0)
 
     # Получили словарь [путь до проги -- команда проги].
     chosen_program_commands: dict[Path, list[str]] = defaultdict(list)

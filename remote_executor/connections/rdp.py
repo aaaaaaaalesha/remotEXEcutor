@@ -17,8 +17,9 @@ def process_rdp(hostname, username, port=3389):
         exit(1)
 
 
-def windows_rdp_connect(hostname, port=3389):
+def windows_rdp_connect(hostname: str, username: str, port=3389):
     try:
+        subprocess.run(['cmdkey', f'/generic:{hostname}:{port}', f'/user:{username}'])
         subprocess.run(['mstsc', f'/v:{hostname}:{port}'])
     except FileNotFoundError:
         msg = '"mstsc.exe" not found. Make sure Remote Desktop Connection client is installed'
@@ -29,6 +30,8 @@ def windows_rdp_connect(hostname, port=3389):
             exit(1)
 
         subprocess.run([alternate_mstsc, f'/v:{hostname}:{port}'])
+    finally:
+        subprocess.run(['cmdkey', f'/delete:{hostname}:{port}'])
 
 
 def nix_rdp_connect(hostname: str, username: str, port=3389):
@@ -38,15 +41,15 @@ def nix_rdp_connect(hostname: str, username: str, port=3389):
         command = ['xfreerdp', '/cert-ignore', f'/u:{username}', f'/p:{password}', f'/v:{hostname}:{port}']
         subprocess.run(command)
     except Exception:
-        msg = (
+        logger.error(
             'No suitable remote desktop client found.\n'
             'Please install "xfreerdp" to connect to RDP on Linux/Darwin'
         )
-        logger.error('No suitable remote desktop client found')
 
 
 def request_password(hostname: str, username: str, port=3389, retries=5) -> str:
     for _ in range(retries):
+        # noinspection PyBroadException
         try:
             password = ask_password(hostname, username)
             subprocess.run([

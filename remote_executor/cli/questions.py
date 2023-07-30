@@ -18,7 +18,7 @@ ask_transport_type = (
 
 ask_username = (
     lambda: inquirer.text(
-        message='Enter username for the passed hostname',
+        message='Enter username',
     )
 )
 
