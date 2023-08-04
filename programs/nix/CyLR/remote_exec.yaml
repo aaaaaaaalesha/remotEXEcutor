@@ -1,0 +1,19 @@
+CyLR:
+  PROGRAM: "CyLR"
+  DESCRIPTION: "CyLR - Live Response Collection tool by Alan Orlikoski and Jason Yegge"
+  PRE_EXEC: |
+    touch -f ~/hamburger_1.txt
+    touch -f ~/hamburger_2.txt
+    touch -f ~/hamburger_3.txt
+    touch -f ~/hamburger_4.txt
+    touch -f ~/hamburger_5.txt
+  BODY:
+    scenario_1: |
+      chmod a+x ./CyLR
+      ./CyLR
+  POST_EXEC: |
+    rm -f ~/hamburger_1.txt
+    rm -f ~/hamburger_2.txt
+    rm -f ~/hamburger_3.txt
+    rm -f ~/hamburger_4.txt
+    rm -f ~/hamburger_5.txt

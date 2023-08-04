@@ -1,0 +1,25 @@
+ifrit:
+  PROGRAM: "ifrit.sh"
+  DESCRIPTION: "Incident Forensic Response In Terminal script for linux"
+
+  PRE_EXEC: |
+    touch -f ~/hamburger_1.txt
+    touch -f ~/hamburger_2.txt
+    touch -f ~/hamburger_3.txt
+    touch -f ~/hamburger_4.txt
+    touch -f ~/hamburger_5.txt
+
+  BODY:
+    new_scenario: |
+      chmod a+x ./ifrit.sh
+      ./ifrit.sh
+    old_scenario: |
+      chmod a+x ./ifrit_old.sh
+      ./ifrit_old.sh
+
+  POST_EXEC: |
+    rm -f ~/hamburger_1.txt
+    rm -f ~/hamburger_2.txt
+    rm -f ~/hamburger_3.txt
+    rm -f ~/hamburger_4.txt
+    rm -f ~/hamburger_5.txt

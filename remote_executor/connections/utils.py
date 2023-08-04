@@ -1,26 +1,18 @@
 import configparser
 import json
-import os
 import socket
 import subprocess
-from pathlib import Path
 
 from tqdm import tqdm
 
 from remote_executor.log import log_subprocess
 from remote_executor.settings import (
-    LOCAL_CONFIG_NAME,
     MAIN_CONFIG_PATH,
+    CONFIG_ENCODING,
 )
 
 
 def is_available_port(host: str, port: int) -> bool:
-    """
-
-    :param host:
-    :param port:
-    :return:
-    """
     # noinspection PyBroadException
     try:
         with socket.create_connection((host, port), timeout=1):
@@ -35,12 +27,6 @@ def get_available_transports(
         hostname: str,
         transport_ports: dict,
 ) -> dict:
-    """
-
-    :param hostname:
-    :param transport_ports:
-    :return:
-    """
     available_transport_ports = {}
     for transport, ports in transport_ports.items():
         available_ports = [
@@ -59,46 +45,9 @@ def get_available_transports(
     return available_transport_ports
 
 
-def scan_programs(programs_dir: Path) -> dict[Path, list[str]]:
-    """
-
-    :param programs_dir:
-    :return:
-    """
-    programs = {}
-    for root, _, files in os.walk(programs_dir):
-        if LOCAL_CONFIG_NAME in files:
-            collect_programs(programs, file=os.path.join(root, LOCAL_CONFIG_NAME))
-
-    return programs
-
-
-def collect_programs(programs: dict, file: str):
-    """
-
-    :param programs:
-    :param file:
-    :return:
-    """
-    config = configparser.ConfigParser()
-    with open(file, 'r', encoding='cp1251') as f:
-        config.read_file(f)
-    for program in config.sections():
-        # Check that program exists in catalog (not in config only).
-        program_dir = Path(file).parent
-        program_path = program_dir.joinpath(program)
-        if not program_path.exists():
-            continue
-
-        programs[program_dir] = [
-            config.get(program, cmd_key)
-            for cmd_key in config.options(program)
-        ]
-
-
 def parse_config(config_path=MAIN_CONFIG_PATH) -> dict:
     config = configparser.ConfigParser()
-    config.read(config_path, encoding='utf-8')
+    config.read(config_path, encoding=CONFIG_ENCODING)
     return {
         section: json.loads(config.get(section, 'ports'))
         for section in config.sections()

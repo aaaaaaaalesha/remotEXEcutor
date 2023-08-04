@@ -1,6 +1,7 @@
 from remote_executor.cli.options import transport_option
 from remote_executor.cli.questions import (
     ask_username,
+    ask_hostname,
 )
 from remote_executor.connections.rdp import process_rdp
 from remote_executor.connections.ssh import process_ssh
@@ -20,16 +21,16 @@ TRANSPORT_HANDLERS = {
 def main():
     """Entrypoint. Welcome ;)"""
     logger.info(APPLICATION_LOGO)
-    hostname = '192.168.0.110'
-    # username = 'sks23'
-    # hostname = ask_hostname()  # TODO: delete
+    # hostname = '192.168.0.105'  # TODO: delete
+    # username = 'aaaaaaaalesha'  # TODO: delete
+    hostname = ask_hostname()
     # Проверяем доступность портов для различных транспортов
     transport_types: dict = get_available_transports(hostname, parse_config())
     if not transport_types:
         logger.info('You have no available transport ports :(')
         exit(0)
 
-    username = ask_username()  # TODO: delete
+    username = ask_username()
 
     transport_type, transport_port = transport_option(transport_types)
     transport_handler = TRANSPORT_HANDLERS.get(transport_type)

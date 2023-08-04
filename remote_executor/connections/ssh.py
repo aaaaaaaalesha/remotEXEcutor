@@ -1,16 +1,20 @@
-import os
 import shutil
+import tarfile
 import tempfile
-from collections import defaultdict
+
 from pathlib import Path
 
+import tqdm
 from fabric import Connection
 
 from remote_executor.cli.questions import (
     ask_password,
-    ask_program_commands_list,
+    ask_programs,
+    ask_scenarios,
+    ask_are_you_sure,
 )
-from remote_executor.connections.utils import scan_programs
+from remote_executor.program.base import scan_programs, Program
+from remote_executor.program.executor import get_executor
 from remote_executor.log import logger
 from remote_executor.settings import (
     PROGRAMS_NIX_DIR,
@@ -22,111 +26,148 @@ from remote_executor.settings import (
 
 def process_ssh(hostname, username, port=22):
     password = request_password(hostname, username)
-    programs_dir = platform_program_dir(hostname, username, password)
-    program_commands = scan_programs(programs_dir)
+    platform = get_remote_platform(hostname, username, password)
+    programs_dir = platform_program_dir(hostname, username, password, platform=platform)
+    programs: list[Program] = scan_programs(programs_dir)
 
-    if not program_commands:
+    if not programs:
         logger.error(
             'You have no choices for remote execution. '
             f'Please, add {LOCAL_CONFIG_NAME} near executable in {PROGRAMS_DIR}.'
         )
         exit(1)
 
-    chosen_program_commands_list: list[tuple[Path, str]] = ask_program_commands_list(program_commands)
+    ready_programs: list[Program] = []
+    is_scenarios_selected = False
+    while not is_scenarios_selected:
+        ready_programs.clear()
+        chosen_programs: list[Program] = ask_programs(programs)
+        if not chosen_programs:
+            logger.info('You have choose nothing. Ok, goodbye...')
+            exit(0)
 
-    if not chosen_program_commands_list:
-        logger.info('You have choose nothing. Ok, goodbye...')
-        exit(0)
+        for program in chosen_programs:
+            if len(program.body_scenarios) == 1:
+                logger.info(f'{program.name} have only one scenario: {program.body_scenarios[0]}')
+                scenarios_indexes = [0]
+            else:
+                scenarios_indexes: list[int] = ask_scenarios(program)
 
-    # Получили словарь [путь до проги -- команда проги].
-    chosen_program_commands: dict[Path, list[str]] = defaultdict(list)
-    for path, command in chosen_program_commands_list:
-        chosen_program_commands[path].append(command)
+            program.setup_execute_scenarios(scenarios_indexes)
+            ready_programs.append(program)
+
+        logger.info('Selected following programs and scenarios:')
+        logger.info('\n'.join([
+            str(program)
+            for program in ready_programs
+        ]))
+        is_scenarios_selected = ask_are_you_sure()
 
     # TODO: fix bugs here
     results_path = execute_commands_on_remote(
         hostname,
         username,
         password,
-        chosen_program_commands,
+        platform,
+        ready_programs,
     )
 
-    logger.info('Results:', results_path)
+    # logger.info('Results:', results_path)
 
 
 def execute_commands_on_remote(
         hostname,
         username,
         password,
-        remote_commands_dict
+        platform,
+        programs: list[Program],
 ):
-    """
+    sep = '\\' if platform == 'windows' else '/'
+    temp_dir_path = Path(tempfile.mkdtemp())
+    remote_dir_path = None
+    with Connection(host=hostname, user=username, connect_kwargs={'password': password}) as conn:
+        try:
+            executor = get_executor(platform, conn, username=username, password=password)
+            remote_dir_path = executor.mktemp_dir()
+            if remote_dir_path is None:
+                logger.error('Failed to create a temporary directory on the remote host')
+                return
 
-    :param hostname:
-    :param username:
-    :param password:
-    :param remote_commands_dict:
-    :return:
-    """
+            # Создал архив с программами (каталоги сохраняют имена).
+            logger.info(f'Sending archive with executables to remote...')
+            temp_archive_path = archive_programs(programs, temp_dir_path)
+            remote_archive_path = executor.put(temp_archive_path, remote_dir_path)
+            if not remote_archive_path:
+                logger.error('Failed to upload programs archive to the remote host')
+                return
 
-    def copy_directory_to_remote(conn, local_dir: Path, remote_dir):
-        temp_tar_file = f"{local_dir}.tar.gz"
-        shutil.make_archive(local_dir, 'gztar', local_dir)
-        result = conn.put(temp_tar_file, remote_dir)
-        os.remove(temp_tar_file)
-        return result.remote
+            logger.info(f'Extract archive with executables in remote...')
+            executor._run(f'tar -xzf {remote_archive_path} -C {remote_dir_path}')
+            executor.rm(remote_archive_path)
 
-    temp_dir = tempfile.mkdtemp()
+            for program in programs:
+                try:
+                    remote_program_dir = f'{remote_dir_path}{sep}{program.name}'
+                    # pre_exec
+                    for command in program.pre_exec_commands:
+                        result = executor._run(f'cd {remote_program_dir} && {command}')
+                        if not result.ok:
+                            logger.error(f'Failed to execute command in pre_exec {scenario.name}: {command}')
+                            if result.stderr:
+                                logger.error(result.stderr)
+                            break
 
-    try:
-        with Connection(
-                host=hostname,
-                user=username,
-                connect_kwargs={'password': password},
-        ) as conn:
-            remote_temp_dir = conn.run('mktemp -d').stdout.strip()
+                    for scenario in program.scenarios_on_execute:
+                        for command in scenario.commands:
+                            # TODO: catch errors from here
+                            result = executor._run(f'cd {remote_program_dir} && {command}')
+                            if not result.ok:
+                                logger.error(f'Failed to execute command in {scenario.name}: {command}')
+                                if result.stderr:
+                                    logger.error(result.stderr)
+                except Exception as err:
+                    logger.error(err)
+                finally:
+                    # post_exec
+                    for command in program.post_exec_commands:
+                        result = executor._run(f'cd {remote_program_dir} && {command}')
+                        if not result.ok:
+                            logger.error(f'Failed to execute command in post_exec {scenario.name}: {command}')
+                            if result.stderr:
+                                logger.error(result.stderr)
 
-            for local_dir, commands in remote_commands_dict.items():
-                remote_archive_path = copy_directory_to_remote(conn, local_dir, remote_temp_dir)
-                conn.run(f'tar -xzvf {remote_archive_path} -C {remote_temp_dir}')
-            for command in commands:
-                # if 'chmod' in command:
-                #     conn.run(f'chmod +x {os.path.join(remote_temp_dir, command.split()[-1])}')
-                conn.run(f'cd {remote_temp_dir} && {command}')
+        except Exception as err:
+            raise err
+        finally:
+            shutil.rmtree(str(temp_dir_path))
+            if remote_dir_path is not None:
+                executor.rm(remote_dir_path)
 
-            for local_dir, _ in remote_commands_dict.items():
-                result_archive_path = os.path.join(temp_dir, f'{local_dir.stem}.zip')
-                conn.run(f'tar -czvf {result_archive_path} -C {remote_temp_dir} .')
-                conn.get(result_archive_path, result_archive_path)
-    except Exception as err:
-        shutil.rmtree(temp_dir)
-        raise err
-    finally:
-        conn.run(f'rm -rf {remote_temp_dir}')
+    # return result_archive_path
 
-    return result_archive_path
+
+def archive_programs(programs: list[Program], temp_dir_path: Path) -> Path:
+    temp_archive_path = temp_dir_path / 'programs.tar.gz'
+    with tarfile.open(temp_archive_path, 'w:gz') as tar:
+        for program in tqdm.tqdm(programs):
+            program_dir = program.program_dir
+            tar.add(program_dir, arcname=program_dir.name, recursive=True)
+
+    return temp_archive_path
 
 
 def get_remote_platform(host, user, password) -> str | None:
-    """
-
-    :param host:
-    :param user:
-    :param password:
-    :return:
-    """
     try:
-        # Создаем подключение к удаленному хосту.
         with Connection(host=host, user=user, connect_kwargs={'password': password}) as conn:
             nix_res = conn.run('uname', hide=True, warn=True)
             win_res = conn.run('help', hide=True, warn=True)
-            # Проверяем операционную систему на удаленном хосте.
             if nix_res.ok:
                 return 'nix'
             elif win_res.ok:
                 return 'windows'
             else:
-                return None
+                logger.error('Could not get the target host platform, sorry :(')
+                exit(1)
     except Exception as e:
         logger.error(f"Error connecting to the remote host: {e}")
         return None
@@ -157,21 +198,11 @@ def platform_program_dir(
         hostname: str,
         username: str,
         password: str,
+        platform=None,
         nix_dir=PROGRAMS_NIX_DIR,
         windows_dir=PROGRAMS_WINDOWS_DIR,
 ) -> Path:
-    """
-
-    :param hostname:
-    :param username:
-    :param password:
-    :param nix_dir:
-    :param windows_dir:
-    :return:
-    """
-    platform = get_remote_platform(hostname, username, password)
     if platform is None:
-        logger.error('Could not get the target host platform, sorry :(')
-        exit(1)
+        platform = get_remote_platform(hostname, username, password)
 
     return nix_dir if platform == 'nix' else windows_dir

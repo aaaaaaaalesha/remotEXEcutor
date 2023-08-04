@@ -25,7 +25,15 @@ USERNAME = os.environ.get('USERNAME', default='username')
 PASSWORD = os.environ.get('PASSWORD', default='password')
 
 MAIN_CONFIG_PATH = BASE_DIR.joinpath('config.ini')
-LOCAL_CONFIG_NAME = 'remote_exec.ini'
+CONFIG_ENCODING = 'UTF-8'
+
+# Configure local configs.
+LOCAL_CONFIG_NAME = 'remote_exec.yaml'
+PROGRAM_KEY = 'PROGRAM'
+DESCRIPTION_KEY = 'DESCRIPTION'
+PRE_EXEC_KEY = 'PRE_EXEC'
+BODY_KEY = 'BODY'
+POST_EXEC_KEY = 'POST_EXEC'
 
 PROGRAMS_DIR = BASE_DIR.parent / 'programs'
 PROGRAMS_NIX_DIR = PROGRAMS_DIR / 'nix'

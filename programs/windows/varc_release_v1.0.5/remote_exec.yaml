@@ -1,0 +1,17 @@
+varc:
+  PROGRAM: "varc.exe"
+  DESCRIPTION: "Volatile Artifact Collector collects a snapshot of volatile data from a system"
+  PRE_EXEC: |
+    echo 'smth' > $HOME\hamburger_1.txt
+    echo 'smth' > $HOME\hamburger_2.txt
+    echo 'smth' > $HOME\hamburger_3.txt
+    echo 'smth' > $HOME\hamburger_4.txt
+    echo 'smth' > $HOME\hamburger_5.txt
+  BODY:
+    scenario_1: ./varc
+  POST_EXEC: |
+    del $HOME\hamburger_1.txt
+    del $HOME\hamburger_2.txt
+    del $HOME\hamburger_3.txt
+    del $HOME\hamburger_4.txt
+    del $HOME\hamburger_5.txt

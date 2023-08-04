@@ -1,0 +1,7 @@
+unix_collector:
+  PROGRAM: "unix_collector.sh"
+  DESCRIPTION: "A shell script for basic forensic collection of various artefacts from UNIX systems"
+  BODY:
+    command: |
+      chmod +x ./unix_collector.sh
+      ./unix_collector.sh
