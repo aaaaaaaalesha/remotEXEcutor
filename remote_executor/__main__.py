@@ -36,7 +36,7 @@ def main():
     transport_handler = TRANSPORT_HANDLERS.get(transport_type)
 
     if transport_handler is None:
-        logger.error(f'Кажется, {transport_type} ещё не поддерживается. Ждите в следующем обновлении ;)')
+        logger.error(f'It seems, {transport_type} not supported yet. Wait it in the next update ;)')
         exit(1)
 
     transport_handler(
