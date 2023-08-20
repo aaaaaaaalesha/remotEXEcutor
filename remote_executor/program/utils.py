@@ -26,7 +26,7 @@ def choose_program_scenarios(programs_dir: Path) -> list[Program]:
     is_scenarios_selected = False
     while not is_scenarios_selected:
         ready_programs.clear()
-        chosen_programs: list[Program] = ask_programs(programs)
+        chosen_programs: list[Program] = programs.copy()  # ask_programs(programs)  TODO: replace to ask
         if not chosen_programs:
             logger.info('You have choose nothing. Ok, goodbye...')
             exit(0)

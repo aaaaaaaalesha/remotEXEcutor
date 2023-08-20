@@ -62,7 +62,7 @@ def execute_commands_on_remote(
                 return
 
             logger.info(f'Extract archive with executables in remote...')
-            executor._run(f'tar -xzf {remote_archive_path} -C {remote_dir_path}')
+            executor.run(f'tar -xzf {remote_archive_path} -C {remote_dir_path}')
             executor.rm(remote_archive_path)
 
             for program in programs:
@@ -70,7 +70,7 @@ def execute_commands_on_remote(
                     remote_program_dir = f'{remote_dir_path}{sep}{program.name}'
                     # pre_exec
                     for command in program.pre_exec_commands:
-                        result = executor._run(f'cd {remote_program_dir} && {command}')
+                        result = executor.run(f'cd {remote_program_dir} && {command}')
                         if not result.ok:
                             logger.error(f'Failed to execute command in pre_exec {scenario.name}: {command}')
                             if result.stderr:
@@ -80,17 +80,17 @@ def execute_commands_on_remote(
                     for scenario in program.scenarios_on_execute:
                         for command in scenario.commands:
                             # TODO: catch errors from here
-                            result = executor._run(f'cd {remote_program_dir} && {command}')
+                            result = executor.run(f'cd {remote_program_dir} && {command}')
                             if not result.ok:
                                 logger.error(f'Failed to execute command in {scenario.name}: {command}')
                                 if result.stderr:
                                     logger.error(result.stderr)
                 except Exception as err:
-                    logger.error(err)
+                    logger.exception(err)
                 finally:
                     # post_exec
                     for command in program.post_exec_commands:
-                        result = executor._run(f'cd {remote_program_dir} && {command}')
+                        result = executor.run(f'cd {remote_program_dir} && {command}')
                         if not result.ok:
                             logger.error(f'Failed to execute command in post_exec {scenario.name}: {command}')
                             if result.stderr:

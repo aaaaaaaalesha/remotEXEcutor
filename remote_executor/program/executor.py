@@ -11,11 +11,11 @@ class BaseExecutor(ABC):
         self.username = username
         self.password = password
 
-    def _run(self, command: str, **kwargs):
+    def run(self, command: str, **kwargs):
         return self.conn.run(command, **kwargs, hide=True, warn=True)
 
     def put(self, filepath: Path, remote_path: str) -> str:
-        result = self.conn.put(str(filepath), remote=remote_path)
+        result = self.conn.put(str(filepath), remote=remote_path.replace('\\', '/'))
         return result.remote  # возвращает путь до переданного файла
 
     def get(self, remote_path: str, local_path: Path):
@@ -30,15 +30,11 @@ class BaseExecutor(ABC):
     def rm(self, path: str) -> bool:
         pass
 
-    @abstractmethod
-    def run(self):
-        pass
-
 
 class NixExecutor(BaseExecutor):
 
     def mktemp_dir(self) -> str | None:
-        result = self._run('mktemp -d')
+        result = self.run('mktemp -d')
         if not result.ok:
             return None
 
@@ -46,30 +42,25 @@ class NixExecutor(BaseExecutor):
         return dir_path
 
     def rm(self, path: str) -> bool:
-        result = self._run(f'rm -rf {path}')
+        result = self.run(f'rm -rf {path}')
         return result.ok
-
-    def run(self):
-        pass
 
 
 class WindowsExecutor(BaseExecutor):
 
-    def mktemp_dir(self) -> Path | None:
+    def mktemp_dir(self) -> str | None:
         with tempfile.TemporaryDirectory() as tempdir:
             name = Path(tempdir).name
-            result = self._run(fr'mkdir $HOME\AppData\Local\Temp\{name}')
+            result = self.run(fr'mkdir $HOME\AppData\Local\Temp\{name}')
 
         if not result.ok:
             return None
 
-        return Path(fr'C:\Users\{self.username}\Local\Temp\{name}')
+        return fr'C:\Users\{self.username}\AppData\Local\Temp\{name}'
 
     def rm(self, path: str) -> bool:
-        self._run(f'Remove-Item -Path "{path}" -Recurse -Force')
-
-    def run(self):
-        pass
+        result = self.run(f'Remove-Item -Path "{path}" -Recurse -Force')
+        return result.ok
 
 
 def get_executor(platform: str, conn: Connection, username: str, password: str):
