@@ -1,3 +1,4 @@
+import datetime
 import os
 import shutil
 import tarfile
@@ -92,7 +93,14 @@ def execute_commands_on_remote(
                     )
 
             # Collect results to local host.
-            result_archive_path = f'{remote_dir_path}_{hash(remote_dir_path)}.tar.gz'
+            logger.info('Collecting results from remote...')
+            remote_hostname = executor.get_hostname()
+            remote_hostname = remote_hostname if remote_hostname else hostname
+            now_dt = datetime.datetime.now()
+            result_archive_path = (
+                f'{remote_dir_path}{sep}'
+                f'{remote_hostname}-{username}-{now_dt:%d.%m.%Y_%H-%M-%S}.tar.gz'
+            )
             executor.run(f'tar -cvf {result_archive_path} {remote_dir_path}')
             save_dir.mkdir(exist_ok=True)
             results_path = save_dir / os.path.basename(result_archive_path)
@@ -106,6 +114,8 @@ def execute_commands_on_remote(
             shutil.rmtree(str(temp_dir_path))
             if remote_dir_path is not None:
                 executor.rm(remote_dir_path)
+            if result_archive_path is not None:
+                executor.rm(result_archive_path)
 
     return results_path
 

@@ -11,6 +11,13 @@ class Executor(ABC):
         self.username = username
         self.password = password
 
+    def get_hostname(self) -> str | None:
+        result = self.run('hostname')
+        if not result.stdout:
+            return None
+
+        return result.stdout.strip()
+
     def run(self, command: str, **kwargs):
         return self.conn.run(command, **kwargs, hide=True, warn=True)
 
