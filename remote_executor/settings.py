@@ -8,7 +8,7 @@ import dotenv
 dotenv.load_dotenv('.env')
 
 # Base parameters.
-APPLICATION_NAME = 'Remote Executor'
+APPLICATION_NAME = 'RemotEXEcutor'
 BASE_DIR = Path(__file__).resolve().parent
 
 # Configure logo for CLI.
