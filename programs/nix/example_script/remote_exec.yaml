@@ -1,6 +1,6 @@
 example_script:
   PROGRAM: "example.sh"
-  DESCRIPTION: "Example script "
+  DESCRIPTION: "Example script for launching Python program"
 
   PRE_EXEC: |
     touch artifact_1.txt
@@ -20,3 +20,4 @@ example_script:
     rm -f artifact_3.txt
     rm -f artifact_4.txt
     rm -f artifact_5.txt
+    
