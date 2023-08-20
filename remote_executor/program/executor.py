@@ -1,5 +1,4 @@
 import tempfile
-
 from abc import abstractmethod, ABC
 from pathlib import Path
 

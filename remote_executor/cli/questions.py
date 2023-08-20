@@ -1,10 +1,10 @@
 import inquirer
 
-from remote_executor.program.base import Program
 from remote_executor.cli.validators import (
     not_empty_validator,
     host_validator,
 )
+from remote_executor.program.base import Program
 
 
 def ask_hostname():
