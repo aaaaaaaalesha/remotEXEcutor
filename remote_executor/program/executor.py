@@ -15,7 +15,7 @@ class BaseExecutor(ABC):
         return self.conn.run(command, **kwargs, hide=True, warn=True)
 
     def put(self, filepath: Path, remote_path: str) -> str:
-        result = self.conn.put(str(filepath), remote=remote_path.replace('\\', '/'))
+        result = self.conn.put(str(filepath), remote=remote_path)
         return result.remote  # возвращает путь до переданного файла
 
     def get(self, remote_path: str, local_path: Path):
@@ -56,7 +56,8 @@ class WindowsExecutor(BaseExecutor):
         if not result.ok:
             return None
 
-        return fr'C:\Users\{self.username}\AppData\Local\Temp\{name}'
+        result = self.run(fr'echo $HOME\AppData\Local\Temp\{name}')
+        return result.stdout.strip()
 
     def rm(self, path: str) -> bool:
         result = self.run(f'Remove-Item -Path "{path}" -Recurse -Force')
