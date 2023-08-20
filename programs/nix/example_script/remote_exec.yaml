@@ -1,0 +1,22 @@
+example_script:
+  PROGRAM: "example.sh"
+  DESCRIPTION: "Example script which creates some files with code"
+
+  PRE_EXEC: |
+    touch hamburger_1.txt
+    touch hamburger_2.txt
+    touch hamburger_3.txt
+    touch hamburger_4.txt
+    touch hamburger_5.txt
+
+  BODY:
+    scenario_1: |
+      chmod a+x ./example.sh
+      ./example.sh
+
+  POST_EXEC: |
+    rm -f hamburger_1.txt
+    rm -f hamburger_2.txt
+    rm -f hamburger_3.txt
+    rm -f hamburger_4.txt
+    rm -f hamburger_5.txt

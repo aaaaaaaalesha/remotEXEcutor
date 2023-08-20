@@ -1,14 +1,17 @@
 varc:
   PROGRAM: "varc"
   DESCRIPTION: "Volatile Artifact Collector collects a snapshot of volatile data from a system."
+
   PRE_EXEC: |
     touch -f ~/hamburger_1.txt
     touch -f ~/hamburger_2.txt
     touch -f ~/hamburger_3.txt
     touch -f ~/hamburger_4.txt
     touch -f ~/hamburger_5.txt
+
   BODY:
     scenario_1: ./varc
+
   POST_EXEC: |
     rm -f ~/hamburger_1.txt
     rm -f ~/hamburger_2.txt

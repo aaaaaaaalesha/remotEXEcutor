@@ -5,7 +5,7 @@ from pathlib import Path
 from fabric import Connection
 
 
-class BaseExecutor(ABC):
+class Executor(ABC):
     def __init__(self, conn: Connection, username: str, password: str):
         self.conn = conn
         self.username = username
@@ -31,7 +31,7 @@ class BaseExecutor(ABC):
         pass
 
 
-class NixExecutor(BaseExecutor):
+class NixExecutor(Executor):
 
     def mktemp_dir(self) -> str | None:
         result = self.run('mktemp -d')
@@ -46,7 +46,7 @@ class NixExecutor(BaseExecutor):
         return result.ok
 
 
-class WindowsExecutor(BaseExecutor):
+class WindowsExecutor(Executor):
 
     def mktemp_dir(self) -> str | None:
         with tempfile.TemporaryDirectory() as tempdir:
@@ -64,7 +64,7 @@ class WindowsExecutor(BaseExecutor):
         return result.ok
 
 
-def get_executor(platform: str, conn: Connection, username: str, password: str):
+def get_executor(platform: str, conn: Connection, username: str, password: str) -> Executor:
     if platform == 'nix':
         return NixExecutor(conn, username, password)
     elif platform == 'windows':

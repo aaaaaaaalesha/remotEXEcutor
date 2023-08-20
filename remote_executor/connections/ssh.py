@@ -1,3 +1,4 @@
+import os
 import shutil
 import tarfile
 import tempfile
@@ -9,11 +10,11 @@ from fabric import Connection
 from remote_executor.cli.questions import ask_password
 from remote_executor.log import logger
 from remote_executor.program.base import Program
-from remote_executor.program.executor import get_executor
+from remote_executor.program.executor import Executor, get_executor
 from remote_executor.program.utils import choose_program_scenarios
 from remote_executor.settings import (
     PROGRAMS_NIX_DIR,
-    PROGRAMS_WINDOWS_DIR,
+    PROGRAMS_WINDOWS_DIR, RESULTS_DIR,
 )
 
 
@@ -31,8 +32,7 @@ def process_ssh(hostname, username, port=22):
         platform,
         ready_programs,
     )
-
-    # logger.info('Results:', results_path)
+    logger.info(f'You can find results in path: {results_path}')
 
 
 def execute_commands_on_remote(
@@ -41,13 +41,14 @@ def execute_commands_on_remote(
         password,
         platform,
         programs: list[Program],
-):
+        save_dir: Path = RESULTS_DIR,
+) -> Path:
     sep = '\\' if platform == 'windows' else '/'
     temp_dir_path = Path(tempfile.mkdtemp())
     remote_dir_path = None
     with Connection(host=hostname, user=username, connect_kwargs={'password': password}) as conn:
         try:
-            executor = get_executor(platform, conn, username=username, password=password)
+            executor: Executor = get_executor(platform, conn, username=username, password=password)
             remote_dir_path = executor.mktemp_dir()
             if remote_dir_path is None:
                 logger.error('Failed to create a temporary directory on the remote host')
@@ -68,34 +69,37 @@ def execute_commands_on_remote(
             for program in programs:
                 try:
                     remote_program_dir = f'{remote_dir_path}{sep}{program.name}'
-                    # pre_exec
-                    for command in program.pre_exec_commands:
-                        result = executor.run(f'cd {remote_program_dir} && {command}')
-                        if not result.ok:
-                            logger.error(f'Failed to execute command in pre_exec {scenario.name}: {command}')
-                            if result.stderr:
-                                logger.error(result.stderr)
-                            break
+                    # PRE_EXEC commands.
+                    execute_commands(
+                        executor,
+                        program.pre_exec_commands,
+                        remote_program_dir,
+                        'PRE_EXEC',
+                    )
 
                     for scenario in program.scenarios_on_execute:
-                        for command in scenario.commands:
-                            # TODO: catch errors from here
-                            result = executor.run(f'cd {remote_program_dir} && {command}')
-                            if not result.ok:
-                                logger.error(f'Failed to execute command in {scenario.name}: {command}')
-                                if result.stderr:
-                                    logger.error(result.stderr)
+                        execute_commands(executor, scenario.commands, remote_program_dir, scenario.name)
+
                 except Exception as err:
                     logger.exception(err)
                 finally:
-                    # post_exec
-                    for command in program.post_exec_commands:
-                        result = executor.run(f'cd {remote_program_dir} && {command}')
-                        if not result.ok:
-                            logger.error(f'Failed to execute command in post_exec {scenario.name}: {command}')
-                            if result.stderr:
-                                logger.error(result.stderr)
+                    # POST_EXEC commands.
+                    execute_commands(
+                        executor,
+                        program.post_exec_commands,
+                        remote_program_dir,
+                        'POST_EXEC',
+                    )
 
+            # Collect results to local host.
+            result_archive_path = f'{remote_dir_path}_{hash(remote_dir_path)}.tar.gz'
+            executor.run(f'tar -cvf {result_archive_path} {remote_dir_path}')
+            save_dir.mkdir(exist_ok=True)
+            results_path = save_dir / os.path.basename(result_archive_path)
+            executor.get(
+                remote_path=result_archive_path,
+                local_path=results_path,
+            )
         except Exception as err:
             raise err
         finally:
@@ -103,7 +107,22 @@ def execute_commands_on_remote(
             if remote_dir_path is not None:
                 executor.rm(remote_dir_path)
 
-    # return result_archive_path
+    return results_path
+
+
+def execute_commands(
+        executor: Executor,
+        commands: list[str],
+        remote_program_dir: str,
+        scenario_name: str,
+):
+    for command in commands:
+        logger.info(f'Executing {scenario_name}: {command}')
+        result = executor.run(f'cd {remote_program_dir} && {command}')
+        if not result.ok:
+            logger.error(f'Failed to execute {scenario_name}: {command}')
+            if result.stderr:
+                logger.error(result.stderr)
 
 
 def archive_programs(programs: list[Program], temp_dir_path: Path) -> Path:

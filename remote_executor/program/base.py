@@ -35,10 +35,10 @@ class Program:
         self.description: str = description if description is not None else ''
         self.program: str | None = config_data.get(PROGRAM_KEY)
 
-        self.pre_exec_commands: list[Command] | None = self.__prepare_commands(
+        self.pre_exec_commands: list[Command] = self.__prepare_commands(
             commands=config_data.get(PRE_EXEC_KEY),
         )
-        self.post_exec_commands: list[Command] | None = self.__prepare_commands(
+        self.post_exec_commands: list[Command] = self.__prepare_commands(
             commands=config_data.get(POST_EXEC_KEY),
         )
 
@@ -57,9 +57,9 @@ class Program:
         ]
 
     @staticmethod
-    def __prepare_commands(commands: str | None) -> list[Command] | None:
+    def __prepare_commands(commands: str | None) -> list[Command]:
         if commands is None:
-            return None
+            return []
 
         return commands.strip('\r\n ').split('\n')
 
