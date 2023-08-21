@@ -21,8 +21,6 @@ TRANSPORT_HANDLERS = {
 def main():
     """Entrypoint. Welcome ;)"""
     logger.info(APPLICATION_LOGO)
-    # hostname = '192.168.0.105'  # TODO: delete
-    # username = 'aaaaaaaalesha'  # TODO: delete
     hostname = ask_hostname()
     # Проверяем доступность портов для различных транспортов
     transport_types: dict = get_available_transports(hostname, parse_config())

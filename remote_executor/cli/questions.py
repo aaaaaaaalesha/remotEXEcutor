@@ -1,17 +1,31 @@
 import inquirer
+from inquirer.errors import ValidationError
 
 from remote_executor.cli.validators import (
     not_empty_validator,
     host_validator,
 )
+from remote_executor.log import logger
 from remote_executor.program.base import Program
 
 
 def ask_hostname():
-    return inquirer.text(
-        message='Enter IP address or hostname you need to connect',
-        validate=host_validator,
-    )
+    is_valid = False
+    hostname = 'localhost'
+    while not is_valid:
+        hostname = inquirer.text(
+            message='Enter IP address or hostname you need to connect',
+        )
+        try:
+            host_validator({}, hostname)
+        except ValidationError as err:
+            logger.info(err.reason)
+
+        is_valid = ask_are_you_sure(
+            f'Are you sure you want to continue with hostname "{hostname}"',
+        )
+
+    return hostname
 
 
 def ask_transport_type(transport_ports):
@@ -58,8 +72,8 @@ def ask_scenarios(program: Program) -> list[int]:
     )
 
 
-def ask_are_you_sure() -> bool:
+def ask_are_you_sure(question: str) -> bool:
     return inquirer.confirm(
-        'Do you want to start with selected options?',
+        question,
         default=True,
     )

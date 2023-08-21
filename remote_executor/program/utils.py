@@ -5,8 +5,8 @@ from remote_executor.cli.questions import (
     ask_scenarios,
     ask_are_you_sure,
 )
-from remote_executor.program.base import scan_programs, Program
 from remote_executor.log import logger
+from remote_executor.program.base import scan_programs, Program
 from remote_executor.settings import (
     LOCAL_CONFIG_NAME,
     PROGRAMS_DIR,
@@ -46,6 +46,8 @@ def choose_program_scenarios(programs_dir: Path) -> list[Program]:
             str(program)
             for program in ready_programs
         ]))
-        is_scenarios_selected = ask_are_you_sure()
+        is_scenarios_selected = ask_are_you_sure(
+            'Do you want to start with selected options?',
+        )
 
     return ready_programs

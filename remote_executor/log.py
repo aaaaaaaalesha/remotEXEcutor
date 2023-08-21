@@ -15,12 +15,18 @@ logger = logging.getLogger(APPLICATION_NAME)
 
 
 def log_subprocess(completed_process: subprocess.CompletedProcess, logger_=logger) -> None:
-    stdout: bytes | None = completed_process.stdout
-    stderr: bytes | None = completed_process.stderr
+    stdout: bytes | str | None = completed_process.stdout
+    stderr: bytes | str | None = completed_process.stderr
     if completed_process.returncode == 0 and stdout:
-        logger_.info(stdout.decode(encoding='utf-8', errors='ignore').strip())
+        if isinstance(stdout, bytes):
+            logger_.info(stdout.decode(encoding='utf-8', errors='ignore').strip())
+        else:  # str
+            logger_.info(stdout.strip())
     if completed_process.returncode != 0 and stderr:
-        logger_.error(stderr.decode(encoding='utf-8', errors='ignore').strip())
+        if isinstance(stderr, bytes):
+            logger_.error(stderr.decode(encoding='utf-8', errors='ignore').strip())
+        else:  # str
+            logger_.error(stdout.strip())
 
 
 if not logger.hasHandlers():
