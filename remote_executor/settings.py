@@ -18,9 +18,9 @@ LOG_LEVEL = 'DEBUG'
 LOG_TO_FILES = True
 LOG_DIR = BASE_DIR / 'logs'
 
-HOSTNAME = os.environ.get('HOSTNAME', default='hostname')
-USERNAME = os.environ.get('USERNAME', default='username')
-PASSWORD = os.environ.get('PASSWORD', default='password')
+HOSTNAME = os.environ.get('HOSTNAME', default=None)
+USERNAME = os.environ.get('USERNAME', default=None)
+PASSWORD = os.environ.get('PASSWORD', default=None)
 
 MAIN_CONFIG_PATH = BASE_DIR.joinpath('config.ini')
 CONFIG_ENCODING = 'UTF-8'
